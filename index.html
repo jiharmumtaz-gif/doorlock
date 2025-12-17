@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Kos - Monitoring Sistem</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+        .card-shadow { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+        .door-card { transition: all 0.3s ease; }
+        .fire-active { animation: pulse-red 1.5s infinite; }
+        
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Smart Kos Monitoring</h1>
+            <p class="text-sm text-gray-500">Akses dan Keamanan Realtime</p>
+        </div>
+        <div id="fire-indicator" class="flex items-center space-x-2 p-2 px-4 rounded-full text-white shadow-md transition-colors bg-green-500">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+            <span class="font-medium text-sm">Status: Aman</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Kolom Kiri: Sensor & Mode -->
+        <div class="lg:col-span-4 space-y-6">
+            
+            <!-- Sensor Suhu -->
+            <div class="card-shadow bg-white p-6 rounded-xl">
+                <h3 class="text-xl font-semibold mb-4 text-gray-700 flex items-center">
+                    <i data-lucide="thermometer" class="w-5 h-5 mr-2 text-red-500"></i> Sensor Lingkungan
+                </h3>
+                <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+                    <span class="text-sm text-gray-600">Suhu Ruangan</span>
+                    <span id="txt-suhu" class="text-3xl font-bold text-red-600">--°C</span>
+                </div>
+            </div>
+
+            <!-- Mode Pendaftaran RFID -->
+            <div class="card-shadow bg-white p-6 rounded-xl">
+                <h3 class="text-xl font-semibold mb-4 text-gray-700 flex items-center">
+                    <i data-lucide="scan-line" class="w-5 h-5 mr-2 text-indigo-500"></i> Mode Pendaftaran
+                </h3>
+                <label for="switchModeDaftar" class="flex items-center cursor-pointer mb-4">
+                    <div class="relative">
+                        <input type="checkbox" id="switchModeDaftar" class="sr-only" onchange="updateModeDaftar(this.checked)">
+                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                    </div>
+                    <div class="ml-3 font-medium text-gray-700">Aktifkan Mode Scan</div>
+                </label>
+                <div class="p-3 bg-gray-100 rounded-lg">
+                    <p class="text-xs text-gray-500 mb-1">UID Terakhir Terdeteksi:</p>
+                    <code id="txt-last-uid" class="font-mono text-indigo-600 break-all">Tunggu Scan...</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kolom Tengah: Kontrol Pintu -->
+        <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- PINTU UTAMA CARD -->
+            <div class="door-card card-shadow bg-white p-6 rounded-xl text-center">
+                <h3 class="text-2xl font-bold mb-2">Pintu Utama</h3>
+                <p class="text-sm text-gray-500 mb-6">Akses Fingerprint/RFID/Remote</p>
+                
+                <div class="my-6">
+                    <i id="icon-pintu-utama" data-lucide="lock" class="w-20 h-20 mx-auto text-green-500 transition-colors"></i>
+                </div>
+
+                <div class="mb-6">
+                    <span id="badge-pintu-utama" class="inline-block px-4 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">TERKUNCI</span>
+                </div>
+
+                <button onclick="bukaPintuRemote('utama')" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center">
+                    <i data-lucide="unlock" class="w-5 h-5 mr-2"></i> BUKA PINTU REMOTE
+                </button>
+                <p id="log-utama-terakhir" class="text-xs text-gray-500 mt-3 h-4">-</p>
+            </div>
+
+            <!-- PINTU KAMAR 1 CARD -->
+            <div class="door-card card-shadow bg-white p-6 rounded-xl text-center">
+                <h3 class="text-2xl font-bold mb-2">Pintu Kamar 1</h3>
+                <p class="text-sm text-gray-500 mb-6">Kontrol Manual & Status</p>
+
+                <div class="my-6">
+                    <i id="icon-pintu-kamar1" data-lucide="lock" class="w-20 h-20 mx-auto text-green-500 transition-colors"></i>
+                </div>
+
+                <div class="mb-6">
+                    <span id="badge-pintu-kamar1" class="inline-block px-4 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">TERKUNCI</span>
+                </div>
+
+                <button onclick="bukaPintuRemote('kamar1')" class="w-full py-3 bg-gray-800 hover:bg-gray-900 text-white font-semibold rounded-xl transition-colors flex items-center justify-center">
+                    <i data-lucide="unlock" class="w-5 h-5 mr-2"></i> BUKA PINTU KAMAR
+                </button>
+                <p id="status-keamanan-kamar" class="text-sm text-green-600 mt-3 h-4">Terkunci Aman</p>
+            </div>
+
+        </div>
+
+        <!-- Kolom Bawah: Log Aktivitas -->
+        <div class="lg:col-span-12">
+            <div class="card-shadow bg-white p-6 rounded-xl">
+                <h3 class="text-xl font-semibold mb-4 text-gray-700 flex items-center">
+                    <i data-lucide="history" class="w-5 h-5 mr-2 text-gray-500"></i> Log Aktivitas Terkini
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pintu</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keterangan Akses</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-log" class="bg-white divide-y divide-gray-200">
+                            <!-- Log data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Firebase SDK (Compatibility version for simple setup) -->
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+<script>
+    // --- KONFIGURASI FIREBASE ---
+    const firebaseConfig = {
+        databaseURL: "https://doorlock-aead3-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    // --- REALTIME LISTENERS ---
+
+    // SUHU & KEBAKARAN
+    db.ref("/suhu_ruangan").on("value", (snap) => {
+        const suhu = snap.val();
+        document.getElementById("txt-suhu").innerText = suhu ? suhu.toFixed(1) + "°C" : "--°C";
+    });
+
+    db.ref("/status_bahaya").on("value", (snap) => {
+        const status = snap.val();
+        const indicator = document.getElementById("fire-indicator");
+        const lucideElement = document.getElementById("fire-indicator").querySelector('i');
+
+        if(status === "KEBAKARAN!") {
+            indicator.className = "fire-active flex items-center space-x-2 p-2 px-4 rounded-full text-white shadow-md transition-colors bg-red-600";
+            indicator.querySelector('span').innerText = 'BAHAYA: KEBAKARAN!';
+            lucideElement.setAttribute('data-lucide', 'alert-triangle');
+        } else {
+            indicator.className = "flex items-center space-x-2 p-2 px-4 rounded-full text-white shadow-md transition-colors bg-green-500";
+            indicator.querySelector('span').innerText = 'Status: Aman';
+            lucideElement.setAttribute('data-lucide', 'shield-check');
+        }
+        lucide.createIcons(); // Refresh icons
+    });
+
+    // PINTU UTAMA
+    db.ref("/status_pintu").on("value", (snap) => {
+        const status = snap.val(); // TERBUKA / TERKUNCI
+        updateUIDoor("utama", status);
+    });
+
+    // PINTU KAMAR 1 (Simulasi Status)
+    db.ref("/status_pintu_kamar1").on("value", (snap) => {
+        const status = snap.val() || "TERKUNCI"; // Default terkunci
+        updateUIDoor("kamar1", status);
+    });
+
+    // MODE DAFTAR & UID
+    db.ref("/mode_daftar").on("value", (snap) => {
+        const checked = snap.val();
+        document.getElementById("switchModeDaftar").checked = checked;
+        // Animasi slider
+        const dot = document.getElementById("switchModeDaftar").parentNode.querySelector('.dot');
+        const block = document.getElementById("switchModeDaftar").parentNode.querySelector('.block');
+        if (checked) {
+            dot.classList.add('translate-x-full', 'bg-blue-500');
+            block.classList.remove('bg-gray-600');
+            block.classList.add('bg-blue-400');
+        } else {
+            dot.classList.remove('translate-x-full', 'bg-blue-500');
+            block.classList.add('bg-gray-600');
+            block.classList.remove('bg-blue-400');
+        }
+    });
+
+    db.ref("/last_scanned_uid").on("value", (snap) => {
+        document.getElementById("txt-last-uid").innerText = "ID: " + (snap.val() || "---");
+    });
+
+    // LOG AKTIVITAS (Logika Dinamis)
+    db.ref("/log_akses").limitToLast(5).on("value", (snap) => {
+        const tableBody = document.getElementById("table-log");
+        tableBody.innerHTML = "";
+        
+        let latestLog = "-";
+        snap.forEach((child) => {
+            const data = child.val(); 
+            const timestamp = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const [pintu, detail] = data.split(":").map(s => s.trim());
+
+            const row = `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${timestamp}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${pintu.replace('Akses Pintu', '').trim()}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-blue-600">${detail}</td>
+                </tr>
+            `;
+            tableBody.insertAdjacentHTML('afterbegin', row);
+            latestLog = data;
+        });
+        document.getElementById("log-utama-terakhir").innerText = latestLog;
+    });
+
+
+    // --- FUNGSI KONTROL ---
+
+    function updateUIDoor(pintu, status) {
+        const badge = document.getElementById(`badge-pintu-${pintu}`);
+        const iconElement = document.getElementById(`icon-pintu-${pintu}`);
+        const iconClass = pintu === 'utama' ? 'w-20 h-20 mx-auto transition-colors' : 'w-20 h-20 mx-auto transition-colors';
+        
+        iconElement.className = iconClass; // Reset class
+        
+        if (status === "TERBUKA") {
+            badge.innerText = "TERBUKA";
+            badge.className = "inline-block px-4 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800";
+            iconElement.setAttribute('data-lucide', 'door-open');
+            iconElement.classList.add('text-yellow-500');
+        } else {
+            badge.innerText = "TERKUNCI";
+            badge.className = "inline-block px-4 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800";
+            iconElement.setAttribute('data-lucide', 'lock');
+            iconElement.classList.add('text-green-500');
+        }
+        lucide.createIcons(); // Refresh icons
+    }
+
+    function bukaPintuRemote(type) {
+        if(type === 'utama') {
+            // Kontrol Pintu Utama - ESP32 akan mereset ini ke false setelah dibuka
+            db.ref("/kontrol_buka").set(true);
+        } else {
+            // Kontrol Pintu Kamar 1 - Set true, lalu reset ke false setelah delay (simulasi pulse solenoid)
+            db.ref("/kontrol_buka_kamar1").set(true);
+            document.getElementById("status-keamanan-kamar").innerText = "Membuka...";
+            setTimeout(() => {
+                db.ref("/kontrol_buka_kamar1").set(false);
+                document.getElementById("status-keamanan-kamar").innerText = "Terkunci Aman";
+            }, 3000); 
+        }
+    }
+
+    function updateModeDaftar(val) {
+        db.ref("/mode_daftar").set(val);
+    }
+
+    // Panggil sekali saat start untuk inisialisasi ikon
+    lucide.createIcons(); 
+</script>
+
+</body>
+</html>
